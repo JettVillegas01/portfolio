@@ -249,7 +249,7 @@ export const certificates: Certificate[] = [
 // ─── Contact ──────────────────────────────────────────────────────────────────
 
 export interface ContactInfo {
-  Icon: React.FC
+  Icon: React.ComponentType<{ className?: string }>
   text: string
 }
 
