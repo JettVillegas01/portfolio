@@ -67,17 +67,7 @@ function useProfileFrame(theme: string, mounted: boolean): string | null {
     [stop]
   )
 
-  // Preload images once on mount to eliminate flashes
-  useEffect(() => {
-    if (!mounted) return
-    const timer = setTimeout(() => {
-      for (let i = 1; i <= TOTAL_FRAMES; i++) {
-        const img = new window.Image()
-        img.src = getFrameSrc(i)
-      }
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [mounted])
+  // Frames are preloaded by LoadingScreen before the site is revealed
 
   useEffect(() => {
     if (!mounted) return

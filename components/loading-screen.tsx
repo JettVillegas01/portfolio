@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from 'react'
 
-// ─── Collect every image URL — visible AND hidden (dark/light mode images) ──
-function collectImageUrls(): Set<string> {
+// ─── Explicitly list every asset that needs preloading ───────────────────────
+
+const TOTAL_FRAMES = 160
+
+/** All 160 frame images used by the dark/light mode animation */
+function getAllFrameUrls(): string[] {
+  const urls: string[] = []
+  for (let i = 1; i <= TOTAL_FRAMES; i++) {
+    urls.push(`/images/profile_frame/frame-${String(i).padStart(3, '0')}.jpg`)
+  }
+  return urls
+}
+
+/** Any other images visible in the DOM (backgrounds, avatars, etc.) */
+function collectDomImageUrls(): Set<string> {
   const urls = new Set<string>()
 
-  // All <img src="...">
   document.querySelectorAll<HTMLImageElement>('img[src]').forEach((img) => {
     if (img.src) urls.add(img.src)
   })
 
-  // All <source srcset="..."> inside <picture> — covers dark/light mode swaps
   document.querySelectorAll<HTMLSourceElement>('source[srcset]').forEach((el) => {
     el.srcset.split(',').forEach((part) => {
       const url = part.trim().split(/\s+/)[0]
@@ -19,12 +30,10 @@ function collectImageUrls(): Set<string> {
     })
   })
 
-  // All <source src="...">
   document.querySelectorAll<HTMLSourceElement>('source[src]').forEach((el) => {
     if (el.src) urls.add(el.src)
   })
 
-  // Inline background-image: url(...)
   document.querySelectorAll<HTMLElement>('[style]').forEach((el) => {
     const bg = el.style.backgroundImage
     const matches = bg.match(/url\(["']?([^"')]+)["']?\)/g) ?? []
@@ -37,43 +46,56 @@ function collectImageUrls(): Set<string> {
   return urls
 }
 
-// ─── Force-fetch every URL so the browser caches them ───────────────────────
-function preloadImages(urls: Set<string>): Promise<void[]> {
-  return Promise.all(
-    Array.from(urls).map(
-      (url) =>
-        new Promise<void>((resolve) => {
-          const img = new Image()
-          img.onload = () => resolve()
-          img.onerror = () => resolve() // never block on broken images
-          img.src = url
-        })
-    )
-  )
+/** Force-fetch a single URL — resolves even on error so we never block */
+function loadImage(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => resolve()
+    img.onerror = () => resolve()
+    img.src = url
+  })
 }
 
-// ─── Full preload sequence ───────────────────────────────────────────────────
-async function preloadAllAssets(): Promise<void> {
-  // 1. Wait for initial page load (scripts, stylesheets, default images)
+// ─── Main preload sequence ────────────────────────────────────────────────────
+
+async function preloadAllAssets(
+  onProgress: (loaded: number, total: number) => void
+): Promise<void> {
+  // 1. Wait for initial page load
   await new Promise<void>((resolve) => {
     if (document.readyState === 'complete') resolve()
     else window.addEventListener('load', () => resolve(), { once: true })
   })
 
-  // 2. Wait for web fonts so no FOUT after loading screen exits
+  // 2. Wait for web fonts
   await document.fonts.ready
 
-  // 3. Scan ALL image URLs now that the full DOM is hydrated
-  const urls = collectImageUrls()
+  // 3. Build the full list:
+  //    - All 160 profile frames (these are NOT in the DOM yet — loaded dynamically)
+  //    - Any other images already in the DOM
+  const frameUrls = getAllFrameUrls()
+  const domUrls = Array.from(collectDomImageUrls())
 
-  // 4. Force-load every image — this is what loads hidden dark/light images
-  await preloadImages(urls)
+  // Deduplicate
+  const allUrls = Array.from(new Set([...frameUrls, ...domUrls]))
+  const total = allUrls.length
+  let loaded = 0
 
-  // 5. One animation frame so the browser paints before we reveal the page
+  // 4. Load all in parallel, report progress
+  await Promise.all(
+    allUrls.map((url) =>
+      loadImage(url).then(() => {
+        loaded++
+        onProgress(loaded, total)
+      })
+    )
+  )
+
+  // 5. One rAF so the browser paints before we reveal
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function LoadingScreen() {
   const [progress, setProgress] = useState(0)
@@ -81,40 +103,27 @@ export function LoadingScreen() {
   const [isDone, setIsDone] = useState(false)
 
   useEffect(() => {
+    const MIN_SHOW_MS = 1500
     const startTime = Date.now()
-    const MIN_SHOW_MS = 1800 // always show for at least this long
 
-    let rafId: number
-    let finished = false
-
-    // Animate counter from 0 → 88 while real loading happens in background
-    const animateProgress = () => {
-      if (finished) return
-      const elapsed = Date.now() - startTime
-      const eased = 1 - Math.pow(1 - Math.min(elapsed / 1400, 1), 3)
-      setProgress(Math.round(eased * 88))
-      if (eased < 1) rafId = requestAnimationFrame(animateProgress)
-    }
-    rafId = requestAnimationFrame(animateProgress)
-
-    // When all assets are loaded, finish the sequence
-    preloadAllAssets().then(() => {
-      finished = true
-      cancelAnimationFrame(rafId)
+    preloadAllAssets((loaded, total) => {
+      // Real progress based on actual frames loaded
+      const pct = Math.round((loaded / total) * 100)
+      setProgress(pct)
+    }).then(() => {
+      // Ensure we always show 100%
+      setProgress(100)
 
       const elapsed = Date.now() - startTime
       const wait = Math.max(0, MIN_SHOW_MS - elapsed)
 
       setTimeout(() => {
-        setProgress(100)                      // snap to 100%
         setTimeout(() => {
-          setIsExiting(true)                  // start curtain slide
-          setTimeout(() => setIsDone(true), 900) // remove from DOM
+          setIsExiting(true)
+          setTimeout(() => setIsDone(true), 900)
         }, 320)
       }, wait)
     })
-
-    return () => cancelAnimationFrame(rafId)
   }, [])
 
   if (isDone) return null
@@ -184,8 +193,8 @@ export function LoadingScreen() {
 
         {/* Corner brackets */}
         {[
-          { top: 28, left: 28,  borderTop:    '1px solid rgba(255,255,255,0.17)', borderLeft:   '1px solid rgba(255,255,255,0.17)' },
-          { top: 28, right: 28, borderTop:    '1px solid rgba(255,255,255,0.17)', borderRight:  '1px solid rgba(255,255,255,0.17)' },
+          { top: 28, left: 28,     borderTop:    '1px solid rgba(255,255,255,0.17)', borderLeft:   '1px solid rgba(255,255,255,0.17)' },
+          { top: 28, right: 28,    borderTop:    '1px solid rgba(255,255,255,0.17)', borderRight:  '1px solid rgba(255,255,255,0.17)' },
           { bottom: 28, left: 28,  borderBottom: '1px solid rgba(255,255,255,0.17)', borderLeft:   '1px solid rgba(255,255,255,0.17)' },
           { bottom: 28, right: 28, borderBottom: '1px solid rgba(255,255,255,0.17)', borderRight:  '1px solid rgba(255,255,255,0.17)' },
         ].map((s, i) => (
@@ -225,7 +234,7 @@ export function LoadingScreen() {
             fontFamily: "'Geist Mono','Fira Code',ui-monospace,monospace",
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           }}>
-            Loading assets
+            {progress < 100 ? 'Loading assets' : 'Ready'}
             <span className="ls-d1" style={{ display:'inline-block', width:3, height:3, borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.6)' }} />
             <span className="ls-d2" style={{ display:'inline-block', width:3, height:3, borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.6)' }} />
             <span className="ls-d3" style={{ display:'inline-block', width:3, height:3, borderRadius:'50%', backgroundColor:'rgba(255,255,255,0.6)' }} />
@@ -253,7 +262,7 @@ export function LoadingScreen() {
             height: '100%',
             width: `${progress}%`,
             background: 'linear-gradient(90deg, #6366f1, #a5b4fc)',
-            transition: 'width 0.18s ease',
+            transition: 'width 0.12s ease',
             boxShadow: '0 0 14px rgba(99,102,241,0.55)',
           }} />
         </div>
