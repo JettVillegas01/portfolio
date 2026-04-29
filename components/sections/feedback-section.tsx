@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { supabase } from "@/lib/supabase"
 
 interface Feedback {
   id: string
@@ -8,11 +9,12 @@ interface Feedback {
   role: string
   comment: string
   rating: number
-  date: string
+  date_text: string
   initials: string
+  created_at?: string
 }
 
-const STORAGE_KEY = "portfolio_feedbacks_v1"
+const SESSION_KEY = "portfolio_my_feedback_ids"
 
 function getInitials(name: string) {
   return name
@@ -214,7 +216,6 @@ function FeedbackCard({
         </div>
       )}
 
-      {/* Top: avatar + info + stars */}
       <div
         style={{
           display: "flex",
@@ -260,12 +261,10 @@ function FeedbackCard({
         </div>
       </div>
 
-      {/* Divider */}
       <div
         style={{ height: "1px", background: "var(--border)", marginBottom: "1rem" }}
       />
 
-      {/* Side-by-side layout: quote icon + date left | comment right */}
       <div
         style={{
           display: "grid",
@@ -274,7 +273,6 @@ function FeedbackCard({
           alignItems: "start",
         }}
       >
-        {/* Left */}
         <div>
           <svg
             width="20"
@@ -296,11 +294,9 @@ function FeedbackCard({
               margin: 0,
             }}
           >
-            {fb.date}
+            {fb.date_text}
           </p>
         </div>
-
-        {/* Right: comment */}
         <div
           style={{ borderLeft: "1px solid var(--border)", paddingLeft: "1.25rem" }}
         >
@@ -323,9 +319,10 @@ function FeedbackCard({
 export function FeedbackSection() {
   const sectionRef = useRef<HTMLElement>(null)
   const [revealed, setRevealed] = useState(false)
-  const [userFeedbacks, setUserFeedbacks] = useState<Feedback[]>([])
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
+  const [loading, setLoading] = useState(true)
+  const [myIds, setMyIds] = useState<Set<string>>(new Set())
 
-  // Form state
   const [name, setName] = useState("")
   const [role, setRole] = useState("")
   const [comment, setComment] = useState("")
@@ -334,15 +331,50 @@ export function FeedbackSection() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
-  // Load from localStorage on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) setUserFeedbacks(JSON.parse(stored))
+      const raw = sessionStorage.getItem(SESSION_KEY)
+      if (raw) setMyIds(new Set(JSON.parse(raw)))
     } catch {}
   }, [])
 
-  // Scroll reveal
+  useEffect(() => {
+    // Fetch all real feedbacks from Supabase
+    supabase
+      .from("feedbacks")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setFeedbacks((data as Feedback[]) ?? [])
+        setLoading(false)
+      })
+
+    // Real-time: prepend new comments instantly, remove deleted ones
+    const channel = supabase
+      .channel("realtime:feedbacks")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "feedbacks" },
+        (payload) => {
+          setFeedbacks((prev) => [payload.new as Feedback, ...prev])
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "feedbacks" },
+        (payload) => {
+          setFeedbacks((prev) =>
+            prev.filter((f) => f.id !== (payload.old as Feedback).id)
+          )
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
   useEffect(() => {
     const obs = new IntersectionObserver(
       ([e]) => {
@@ -367,50 +399,59 @@ export function FeedbackSection() {
     return e
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate()
     setErrors(e)
     if (Object.keys(e).length) return
 
     setSubmitting(true)
-    setTimeout(() => {
-      const now = new Date()
-      const months = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec",
-      ]
-      const newFb: Feedback = {
-        id: `user-${Date.now()}`,
+
+    const now = new Date()
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    const { data, error } = await supabase
+      .from("feedbacks")
+      .insert([{
         name: name.trim(),
         role: role.trim(),
         comment: comment.trim(),
         rating,
-        date: `${months[now.getMonth()]} ${now.getFullYear()}`,
+        date_text: `${months[now.getMonth()]} ${now.getFullYear()}`,
         initials: getInitials(name),
-      }
-      const updated = [newFb, ...userFeedbacks]
-      setUserFeedbacks(updated)
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-      } catch {}
-      setSubmitting(false)
-      setSubmitted(true)
-      setName("")
-      setRole("")
-      setComment("")
-      setRating(5)
-    }, 800)
+      }])
+      .select()
+      .single()
+
+    setSubmitting(false)
+
+    if (error) {
+      setErrors({ submit: "Something went wrong. Please try again." })
+      return
+    }
+
+    const newFb = data as Feedback
+    const updatedIds = new Set(myIds).add(newFb.id)
+    setMyIds(updatedIds)
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify([...updatedIds]))
+    } catch {}
+
+    setSubmitted(true)
+    setName("")
+    setRole("")
+    setComment("")
+    setRating(5)
   }
 
-  function handleDelete(id: string) {
-    const updated = userFeedbacks.filter((f) => f.id !== id)
-    setUserFeedbacks(updated)
+  async function handleDelete(id: string) {
+    await supabase.from("feedbacks").delete().eq("id", id)
+    const updatedIds = new Set(myIds)
+    updatedIds.delete(id)
+    setMyIds(updatedIds)
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify([...updatedIds]))
     } catch {}
   }
-
-  const allFeedbacks = [...userFeedbacks]
 
   const inputStyle = (hasError: boolean): React.CSSProperties => ({
     width: "100%",
@@ -428,7 +469,6 @@ export function FeedbackSection() {
 
   return (
     <section ref={sectionRef} id="feedback" style={{ position: "relative" }}>
-      {/* Ambient glow */}
       <div
         aria-hidden
         style={{
@@ -444,7 +484,6 @@ export function FeedbackSection() {
         }}
       />
 
-      {/* Section Header */}
       <div
         style={{
           textAlign: "center",
@@ -492,7 +531,6 @@ export function FeedbackSection() {
         </p>
       </div>
 
-      {/* Main layout: Form (left sticky) + Cards (right) */}
       <div
         style={{
           display: "grid",
@@ -512,8 +550,7 @@ export function FeedbackSection() {
             top: "6rem",
             opacity: revealed ? 1 : 0,
             transform: revealed ? "translateY(0)" : "translateY(24px)",
-            transition:
-              "opacity 0.7s var(--ease) 0.1s, transform 0.7s var(--ease) 0.1s",
+            transition: "opacity 0.7s var(--ease) 0.1s, transform 0.7s var(--ease) 0.1s",
           }}
         >
           <div style={{ marginBottom: "1.25rem" }}>
@@ -528,21 +565,12 @@ export function FeedbackSection() {
             >
               Leave a Feedback
             </h3>
-            <p
-              style={{
-                fontSize: "0.78rem",
-                color: "var(--muted)",
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
+            <p style={{ fontSize: "0.78rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
               Worked with me? Share your experience.
             </p>
           </div>
 
-          <div
-            style={{ height: "1px", background: "var(--border)", marginBottom: "1.25rem" }}
-          />
+          <div style={{ height: "1px", background: "var(--border)", marginBottom: "1.25rem" }} />
 
           {submitted ? (
             <div
@@ -567,52 +595,19 @@ export function FeedbackSection() {
                   justifyContent: "center",
                 }}
               >
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <p
-                style={{
-                  fontFamily: "var(--font-syne)",
-                  fontWeight: "700",
-                  fontSize: "0.95rem",
-                  color: "var(--text)",
-                  margin: 0,
-                }}
-              >
+              <p style={{ fontFamily: "var(--font-syne)", fontWeight: "700", fontSize: "0.95rem", color: "var(--text)", margin: 0 }}>
                 Thank you!
               </p>
-              <p
-                style={{
-                  fontSize: "0.8rem",
-                  color: "var(--muted)",
-                  margin: 0,
-                  lineHeight: 1.6,
-                }}
-              >
+              <p style={{ fontSize: "0.8rem", color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
                 Your feedback has been posted. It means a lot.
               </p>
               <button
                 onClick={() => setSubmitted(false)}
-                style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.78rem",
-                  color: "var(--accent)",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-dm-sans)",
-                  padding: 0,
-                }}
+                style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--accent)", background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-dm-sans)", padding: 0 }}
               >
                 Leave another →
               </button>
@@ -621,94 +616,41 @@ export function FeedbackSection() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
               {/* Name */}
               <div>
-                <label
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text2)",
-                    fontWeight: 500,
-                    display: "block",
-                    marginBottom: "0.4rem",
-                    letterSpacing: "0.03em",
-                  }}
-                >
+                <label style={{ fontSize: "0.75rem", color: "var(--text2)", fontWeight: 500, display: "block", marginBottom: "0.4rem", letterSpacing: "0.03em" }}>
                   Full Name *
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. Alex Rivera"
                   value={name}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                    setErrors((p) => ({ ...p, name: "" }))
-                  }}
+                  onChange={(e) => { setName(e.target.value); setErrors((p) => ({ ...p, name: "" })) }}
                   style={inputStyle(!!errors.name)}
-                  onFocus={(e) => {
-                    ;(e.target as HTMLInputElement).style.borderColor = "var(--accent)"
-                  }}
-                  onBlur={(e) => {
-                    ;(e.target as HTMLInputElement).style.borderColor = errors.name
-                      ? "#ff6b6b"
-                      : "var(--border)"
-                  }}
+                  onFocus={(e) => { ;(e.target as HTMLInputElement).style.borderColor = "var(--accent)" }}
+                  onBlur={(e) => { ;(e.target as HTMLInputElement).style.borderColor = errors.name ? "#ff6b6b" : "var(--border)" }}
                 />
-                {errors.name && (
-                  <p style={{ fontSize: "0.72rem", color: "#ff6b6b", margin: "0.3rem 0 0" }}>
-                    {errors.name}
-                  </p>
-                )}
+                {errors.name && <p style={{ fontSize: "0.72rem", color: "#ff6b6b", margin: "0.3rem 0 0" }}>{errors.name}</p>}
               </div>
 
               {/* Role */}
               <div>
-                <label
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text2)",
-                    fontWeight: 500,
-                    display: "block",
-                    marginBottom: "0.4rem",
-                    letterSpacing: "0.03em",
-                  }}
-                >
+                <label style={{ fontSize: "0.75rem", color: "var(--text2)", fontWeight: 500, display: "block", marginBottom: "0.4rem", letterSpacing: "0.03em" }}>
                   Role / Company *
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. Designer · Acme Co."
                   value={role}
-                  onChange={(e) => {
-                    setRole(e.target.value)
-                    setErrors((p) => ({ ...p, role: "" }))
-                  }}
+                  onChange={(e) => { setRole(e.target.value); setErrors((p) => ({ ...p, role: "" })) }}
                   style={inputStyle(!!errors.role)}
-                  onFocus={(e) => {
-                    ;(e.target as HTMLInputElement).style.borderColor = "var(--accent)"
-                  }}
-                  onBlur={(e) => {
-                    ;(e.target as HTMLInputElement).style.borderColor = errors.role
-                      ? "#ff6b6b"
-                      : "var(--border)"
-                  }}
+                  onFocus={(e) => { ;(e.target as HTMLInputElement).style.borderColor = "var(--accent)" }}
+                  onBlur={(e) => { ;(e.target as HTMLInputElement).style.borderColor = errors.role ? "#ff6b6b" : "var(--border)" }}
                 />
-                {errors.role && (
-                  <p style={{ fontSize: "0.72rem", color: "#ff6b6b", margin: "0.3rem 0 0" }}>
-                    {errors.role}
-                  </p>
-                )}
+                {errors.role && <p style={{ fontSize: "0.72rem", color: "#ff6b6b", margin: "0.3rem 0 0" }}>{errors.role}</p>}
               </div>
 
               {/* Rating */}
               <div>
-                <label
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text2)",
-                    fontWeight: 500,
-                    display: "block",
-                    marginBottom: "0.5rem",
-                    letterSpacing: "0.03em",
-                  }}
-                >
+                <label style={{ fontSize: "0.75rem", color: "var(--text2)", fontWeight: 500, display: "block", marginBottom: "0.5rem", letterSpacing: "0.03em" }}>
                   Rating *
                 </label>
                 <StarPicker value={rating} onChange={setRating} />
@@ -716,63 +658,31 @@ export function FeedbackSection() {
 
               {/* Comment */}
               <div>
-                <label
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--text2)",
-                    fontWeight: 500,
-                    display: "block",
-                    marginBottom: "0.4rem",
-                    letterSpacing: "0.03em",
-                  }}
-                >
+                <label style={{ fontSize: "0.75rem", color: "var(--text2)", fontWeight: 500, display: "block", marginBottom: "0.4rem", letterSpacing: "0.03em" }}>
                   Your Feedback *
                 </label>
                 <textarea
                   placeholder="Share your experience working with Jett..."
                   value={comment}
-                  onChange={(e) => {
-                    setComment(e.target.value)
-                    setErrors((p) => ({ ...p, comment: "" }))
-                  }}
+                  onChange={(e) => { setComment(e.target.value); setErrors((p) => ({ ...p, comment: "" })) }}
                   rows={4}
-                  style={{
-                    ...inputStyle(!!errors.comment),
-                    resize: "vertical",
-                    minHeight: "100px",
-                    lineHeight: 1.7,
-                  }}
-                  onFocus={(e) => {
-                    ;(e.target as HTMLTextAreaElement).style.borderColor = "var(--accent)"
-                  }}
-                  onBlur={(e) => {
-                    ;(e.target as HTMLTextAreaElement).style.borderColor = errors.comment
-                      ? "#ff6b6b"
-                      : "var(--border)"
-                  }}
+                  style={{ ...inputStyle(!!errors.comment), resize: "vertical", minHeight: "100px", lineHeight: 1.7 }}
+                  onFocus={(e) => { ;(e.target as HTMLTextAreaElement).style.borderColor = "var(--accent)" }}
+                  onBlur={(e) => { ;(e.target as HTMLTextAreaElement).style.borderColor = errors.comment ? "#ff6b6b" : "var(--border)" }}
                 />
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: "0.3rem",
-                  }}
-                >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.3rem" }}>
                   {errors.comment ? (
-                    <p style={{ fontSize: "0.72rem", color: "#ff6b6b", margin: 0 }}>
-                      {errors.comment}
-                    </p>
-                  ) : (
-                    <span />
-                  )}
-                  <p style={{ fontSize: "0.7rem", color: "var(--muted)", margin: 0 }}>
-                    {comment.length}/400
-                  </p>
+                    <p style={{ fontSize: "0.72rem", color: "#ff6b6b", margin: 0 }}>{errors.comment}</p>
+                  ) : <span />}
+                  <p style={{ fontSize: "0.7rem", color: "var(--muted)", margin: 0 }}>{comment.length}/400</p>
                 </div>
               </div>
 
-              {/* Submit button */}
+              {errors.submit && (
+                <p style={{ fontSize: "0.78rem", color: "#ff6b6b", margin: 0 }}>{errors.submit}</p>
+              )}
+
+              {/* Submit */}
               <button
                 onClick={handleSubmit}
                 disabled={submitting}
@@ -780,9 +690,7 @@ export function FeedbackSection() {
                   width: "100%",
                   padding: "0.8rem",
                   borderRadius: "10px",
-                  background: submitting
-                    ? "var(--surface2)"
-                    : "linear-gradient(135deg, var(--accent), var(--accent2))",
+                  background: submitting ? "var(--surface2)" : "linear-gradient(135deg, var(--accent), var(--accent2))",
                   border: "none",
                   color: "#fff",
                   fontSize: "0.875rem",
@@ -797,26 +705,12 @@ export function FeedbackSection() {
                   gap: "8px",
                   boxShadow: submitting ? "none" : "0 4px 20px -6px var(--glow-strong)",
                 }}
-                onMouseEnter={(e) => {
-                  if (!submitting)
-                    (e.currentTarget as HTMLButtonElement).style.opacity = "0.88"
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.opacity = "1"
-                }}
+                onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.opacity = "0.88" }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1" }}
               >
                 {submitting ? (
                   <>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      style={{ animation: "spin 0.8s linear infinite" }}
-                    >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "spin 0.8s linear infinite" }}>
                       <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                     </svg>
                     Posting...
@@ -824,16 +718,7 @@ export function FeedbackSection() {
                 ) : (
                   <>
                     Submit Feedback
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="5" y1="12" x2="19" y2="12" />
                       <polyline points="12 5 19 12 12 19" />
                     </svg>
@@ -844,9 +729,27 @@ export function FeedbackSection() {
           )}
         </div>
 
-        {/* ── CARDS COLUMN ── */}
+        {/* ── CARDS COLUMN — real feedbacks only ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {allFeedbacks.length === 0 ? (
+          {loading ? (
+            <div
+              style={{
+                borderRadius: "14px",
+                padding: "3rem 2rem",
+                background: "var(--surface)",
+                border: "1px dashed var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: revealed ? 0.6 : 0,
+                transition: "opacity 0.35s var(--ease)",
+              }}
+            >
+              <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
+                Loading feedbacks...
+              </p>
+            </div>
+          ) : feedbacks.length === 0 ? (
             <div
               style={{
                 borderRadius: "14px",
@@ -862,49 +765,29 @@ export function FeedbackSection() {
                 transition: "all 0.35s var(--ease)",
               }}
             >
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="var(--muted)"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{ opacity: 0.5 }}
-              >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              <p
-                style={{
-                  fontSize: "0.875rem",
-                  color: "var(--muted)",
-                  margin: 0,
-                  textAlign: "center",
-                  lineHeight: 1.6,
-                }}
-              >
+              <p style={{ fontSize: "0.875rem", color: "var(--muted)", margin: 0, textAlign: "center", lineHeight: 1.6 }}>
                 No feedback yet. Be the first to leave one!
               </p>
             </div>
           ) : (
-            allFeedbacks.map((fb, i) => (
+            feedbacks.map((fb, i) => (
               <FeedbackCard
                 key={fb.id}
                 fb={fb}
                 index={i}
                 revealed={revealed}
-                isOwn={fb.id.startsWith("user-")}
-                onDelete={
-                  fb.id.startsWith("user-") ? () => handleDelete(fb.id) : undefined
-                }
+                isOwn={myIds.has(fb.id)}
+                onDelete={myIds.has(fb.id) ? () => handleDelete(fb.id) : undefined}
               />
             ))
           )}
         </div>
       </div>
 
-      {/* Bottom stats bar */}
+      {/* Bottom stats */}
       <div
         style={{
           marginTop: "3rem",
@@ -915,8 +798,7 @@ export function FeedbackSection() {
           flexWrap: "wrap",
           opacity: revealed ? 1 : 0,
           transform: revealed ? "translateY(0)" : "translateY(16px)",
-          transition:
-            "opacity 0.7s var(--ease) 0.45s, transform 0.7s var(--ease) 0.45s",
+          transition: "opacity 0.7s var(--ease) 0.45s, transform 0.7s var(--ease) 0.45s",
         }}
       >
         {[
@@ -924,35 +806,11 @@ export function FeedbackSection() {
           { value: "100%", label: "Satisfaction Rate" },
           { value: "15+", label: "Projects Delivered" },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "4px",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "var(--font-syne)",
-                fontSize: "1.55rem",
-                fontWeight: "800",
-                color: "var(--accent)",
-                letterSpacing: "-0.03em",
-              }}
-            >
+          <div key={stat.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+            <span style={{ fontFamily: "var(--font-syne)", fontSize: "1.55rem", fontWeight: "800", color: "var(--accent)", letterSpacing: "-0.03em" }}>
               {stat.value}
             </span>
-            <span
-              style={{
-                fontSize: "0.72rem",
-                color: "var(--muted)",
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                fontWeight: 500,
-              }}
-            >
+            <span style={{ fontSize: "0.72rem", color: "var(--muted)", letterSpacing: "0.09em", textTransform: "uppercase", fontWeight: 500 }}>
               {stat.label}
             </span>
           </div>

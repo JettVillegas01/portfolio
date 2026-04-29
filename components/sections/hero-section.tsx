@@ -510,21 +510,6 @@ export function HeroSection() {
         />
 
         {/* Hint label */}
-        <div
-          className="absolute bottom-[-1.75rem] left-1/2 -translate-x-1/2 pointer-events-none"
-          style={{
-            opacity: mounted ? 0.38 : 0,
-            transition: "opacity 1.2s ease 1.5s",
-            fontFamily: "'DM Sans', sans-serif",
-            fontSize: "0.58rem",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--muted)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Click an icon to boost its ring
-        </div>
       </div>
 
       {/* Mobile image */}

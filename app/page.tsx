@@ -7,19 +7,23 @@ import { CertificatesSection } from "@/components/sections/certificates-section"
 import { FeedbackSection } from "@/components/sections/feedback-section"
 import { ContactSection } from "@/components/sections/contact-section"
 import { Footer } from "@/components/footer"
+import { LoadingScreen } from "@/components/loading-screen"
 
 export default function Home() {
   return (
-    <main>
-      <Header />
-      <HeroSection />
-      <AboutSection />
-      <SkillsSection />
-      <PortfolioSection />
-      <CertificatesSection />
-      <FeedbackSection />
-      <ContactSection />
-      <Footer />
-    </main>
+    <>
+      <LoadingScreen />
+      <main>
+        <Header />
+        <HeroSection />
+        <AboutSection />
+        <SkillsSection />
+        <PortfolioSection />
+        <CertificatesSection />
+        <FeedbackSection />
+        <ContactSection />
+        <Footer />
+      </main>
+    </>
   )
 }
