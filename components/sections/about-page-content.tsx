@@ -491,6 +491,22 @@ function CareerBlock() {
           from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        .career-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        @media (min-width: 640px) {
+          .career-grid {
+            grid-template-columns: repeat(4, 1fr);
+          }
+        }
+        .boaz-card {
+          grid-column: span 2;
+        }
+        @media (min-width: 640px) {
+          .boaz-card {
+            grid-column: span 1;
+          }
+        }
         .flip-card {
           perspective: 1000px;
           width: 100%;
@@ -613,9 +629,10 @@ function CareerBlock() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
+            gridTemplateColumns: "repeat(2, 1fr)",
             gap: "1rem",
           }}
+          className="career-grid"
         >
           {careerEntries.map((entry, i) => (
             <div
@@ -630,7 +647,7 @@ function CareerBlock() {
               }}
             >
               {entry.type === "real" ? (
-                <div className="flip-card flip-card-real">
+                <div className="flip-card flip-card-real boaz-card">
                   <div className="flip-card-inner">
                     <div
                       className="flip-card-front"
@@ -646,9 +663,9 @@ function CareerBlock() {
                     >
                       <div
                         style={{
-                          width: "56px",
-                          height: "56px",
-                          borderRadius: "14px",
+                          width: "72px",
+                          height: "72px",
+                          borderRadius: "18px",
                           overflow: "hidden",
                           border: "1px solid rgba(255,255,255,0.1)",
                           background: "#fff",
@@ -659,8 +676,8 @@ function CareerBlock() {
                         <Image
                           src={(entry as any).logo}
                           alt={(entry as any).company}
-                          width={56}
-                          height={56}
+                          width={72}
+                          height={72}
                           style={{
                             objectFit: "cover",
                             width: "100%",
