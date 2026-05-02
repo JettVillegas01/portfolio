@@ -5,8 +5,6 @@ import Link from "next/link"
 import { TypedText } from "@/components/typed-text"
 import { orbitRings, socialLinks } from "@/lib/data"
 
-// ─── Frame animation helpers ────────────────────────────────────────────────
-
 const TOTAL_FRAMES = 160
 const FRAME_INTERVAL_MS = 3000 / TOTAL_FRAMES
 
@@ -33,31 +31,18 @@ function useProfileFrame(theme: string, mounted: boolean): string | null {
       stop()
       dirRef.current = dir
       let lastTime = performance.now()
-
       const animate = (time: number) => {
         const delta = time - lastTime
         if (delta >= FRAME_INTERVAL_MS) {
           lastTime = time - (delta % FRAME_INTERVAL_MS)
-
           const next = frameRef.current + dirRef.current
-          if (next >= TOTAL_FRAMES) {
-            frameRef.current = TOTAL_FRAMES
-            setFrame(TOTAL_FRAMES)
-            stop()
-            return
-          }
-          if (next <= 1) {
-            frameRef.current = 1
-            setFrame(1)
-            stop()
-            return
-          }
+          if (next >= TOTAL_FRAMES) { frameRef.current = TOTAL_FRAMES; setFrame(TOTAL_FRAMES); stop(); return }
+          if (next <= 1) { frameRef.current = 1; setFrame(1); stop(); return }
           frameRef.current = next
           setFrame(next)
         }
         rAFRef.current = requestAnimationFrame(animate)
       }
-
       rAFRef.current = requestAnimationFrame(animate)
     },
     [stop]
@@ -65,7 +50,6 @@ function useProfileFrame(theme: string, mounted: boolean): string | null {
 
   useEffect(() => {
     if (!mounted) return
-
     if (isFirstRender.current) {
       isFirstRender.current = false
       const init = theme === "light" ? 1 : TOTAL_FRAMES
@@ -73,18 +57,14 @@ function useProfileFrame(theme: string, mounted: boolean): string | null {
       setFrame(init)
       return
     }
-
     start(theme === "dark" ? 1 : -1)
     return () => stop()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, mounted])
 
   useEffect(() => () => stop(), [stop])
-
   return frame === null ? null : getFrameSrc(frame)
 }
-
-// ────────────────────────────────────────────────────────────────────────────
 
 export function HeroSection() {
   const [mounted, setMounted] = useState(false)
@@ -93,23 +73,14 @@ export function HeroSection() {
 
   useEffect(() => {
     const t = requestAnimationFrame(() => setMounted(true))
-
     const initialTheme = document.documentElement.getAttribute("data-theme") || "dark"
     setCurrentTheme(initialTheme)
-
     const observer = new MutationObserver(() => {
       const updated = document.documentElement.getAttribute("data-theme") || "dark"
       setCurrentTheme(updated)
     })
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-theme"],
-    })
-
-    return () => {
-      cancelAnimationFrame(t)
-      observer.disconnect()
-    }
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] })
+    return () => { cancelAnimationFrame(t); observer.disconnect() }
   }, [])
 
   const profileSrc = useProfileFrame(currentTheme, mounted)
@@ -120,20 +91,14 @@ export function HeroSection() {
       if (boostedRings.has(ringIndex)) return
       setBoostedRings((prev) => new Set([...prev, ringIndex]))
       setTimeout(() => {
-        setBoostedRings((prev) => {
-          const next = new Set(prev)
-          next.delete(ringIndex)
-          return next
-        })
+        setBoostedRings((prev) => { const next = new Set(prev); next.delete(ringIndex); return next })
       }, 2500)
     },
     [boostedRings]
   )
 
   const getAnimDuration = (ringIndex: number, baseDuration: string): string => {
-    if (boostedRings.has(ringIndex)) {
-      return `${(parseFloat(baseDuration) / 5).toFixed(2)}s`
-    }
+    if (boostedRings.has(ringIndex)) return `${(parseFloat(baseDuration) / 5).toFixed(2)}s`
     return baseDuration
   }
 
@@ -147,27 +112,22 @@ export function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex flex-col sm:flex-row lg:flex-row items-center justify-between gap-8 sm:gap-10 lg:gap-8 overflow-hidden"
+      className="relative min-h-screen flex flex-col sm:flex-row lg:flex-row items-center justify-between gap-6 sm:gap-10 lg:gap-8"
+      style={{ overflow: "hidden" }}
     >
       {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
-        <div
-          className="absolute top-1/3 left-1/4 w-[40rem] h-[40rem] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(124,110,255,0.055) 0%, transparent 70%)" }}
-        />
-        <div
-          className="absolute bottom-1/4 right-1/3 w-[30rem] h-[30rem] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(124,110,255,0.035) 0%, transparent 70%)" }}
-        />
+        <div className="absolute top-1/3 left-1/4 w-[40rem] h-[40rem] rounded-full" style={{ background: "radial-gradient(circle, rgba(124,110,255,0.055) 0%, transparent 70%)" }} />
+        <div className="absolute bottom-1/4 right-1/3 w-[30rem] h-[30rem] rounded-full" style={{ background: "radial-gradient(circle, rgba(124,110,255,0.035) 0%, transparent 70%)" }} />
       </div>
 
-      {/* Watermark */}
+      {/* Watermark — clipped strictly to section, no overflow */}
       <div
         aria-hidden
-        className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-0"
+        className="pointer-events-none select-none absolute top-1/2 left-1/2 z-0"
         style={{
           fontFamily: "var(--font-syne), Syne, sans-serif",
-          fontSize: "clamp(10rem, 22vw, 26rem)",
+          fontSize: "clamp(8rem, 20vw, 26rem)",
           fontWeight: 800,
           color: "transparent",
           WebkitTextStroke: "1px rgba(124,110,255,0.04)",
@@ -175,14 +135,21 @@ export function HeroSection() {
           whiteSpace: "nowrap",
           opacity: mounted ? 1 : 0,
           transition: "opacity 0.8s ease",
+          transform: "translate(-50%, -50%)",
+          maxWidth: "100%",
+          overflow: "hidden",
         }}
       >
         JETT
       </div>
 
-      {/* ── Mobile / Tablet profile image — hidden on lg+ ── */}
+      {/* ── MOBILE/TABLET PROFILE IMAGE
+           · First in DOM = renders first (top) on mobile column layout
+           · sm:order-last = moves to right side on tablet/desktop row layout
+           · hidden on lg+ (orbit rings take over)
+      ── */}
       <div
-        className="flex lg:hidden order-first sm:order-last flex-shrink-0 relative z-10 items-center justify-center"
+        className="flex lg:hidden flex-shrink-0 relative z-10 items-center justify-center sm:order-last"
         style={{
           opacity: mounted ? 1 : 0,
           transform: mounted ? "translateY(0)" : "translateY(16px)",
@@ -192,89 +159,49 @@ export function HeroSection() {
         <div
           className="relative flex items-center justify-center"
           style={{
-            width: "clamp(160px, 36vw, 280px)",
-            height: "clamp(160px, 36vw, 280px)",
+            width: "clamp(150px, 38vw, 260px)",
+            height: "clamp(150px, 38vw, 260px)",
           }}
         >
-          {/* Outer spinning dashed ring */}
+          {/* Spinning dashed rings */}
           <div
             className="absolute inset-0 rounded-full pointer-events-none"
-            style={{
-              border: "1px dashed rgba(124,110,255,0.22)",
-              animation: "spin 18s linear infinite",
-            }}
+            style={{ border: "1px dashed rgba(124,110,255,0.22)", animation: "spin 18s linear infinite" }}
           />
-          {/* Inner counter-spinning ring */}
           <div
             className="absolute rounded-full pointer-events-none"
-            style={{
-              inset: "14px",
-              border: "1px dashed rgba(124,110,255,0.12)",
-              animation: "spin 12s linear infinite reverse",
-            }}
+            style={{ inset: "12px", border: "1px dashed rgba(124,110,255,0.12)", animation: "spin 12s linear infinite reverse" }}
           />
+          {/* Accent dots */}
+          <div className="absolute w-2.5 h-2.5 rounded-full bg-[var(--accent)]" style={{ top: "4px", left: "50%", transform: "translateX(-50%)", boxShadow: "0 0 10px rgba(124,110,255,0.7)" }} />
+          <div className="absolute w-2 h-2 rounded-full bg-[var(--accent2)]" style={{ bottom: "10px", right: "14px", boxShadow: "0 0 7px rgba(124,110,255,0.45)" }} />
 
-          {/* Accent dot top */}
-          <div
-            className="absolute w-2.5 h-2.5 rounded-full bg-[var(--accent)]"
-            style={{
-              top: "6px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              boxShadow: "0 0 10px rgba(124,110,255,0.7)",
-            }}
-          />
-          {/* Accent dot bottom-right */}
-          <div
-            className="absolute w-2 h-2 rounded-full bg-[var(--accent2)]"
-            style={{
-              bottom: "12px",
-              right: "16px",
-              boxShadow: "0 0 7px rgba(124,110,255,0.45)",
-            }}
-          />
-
-          {/* Circular profile photo */}
+          {/* Circular photo */}
           <div
             className="relative rounded-full overflow-hidden z-10"
             style={{
-              width: "clamp(128px, 28vw, 220px)",
-              height: "clamp(128px, 28vw, 220px)",
+              width: "clamp(118px, 30vw, 210px)",
+              height: "clamp(118px, 30vw, 210px)",
               border: "2px solid rgba(124,110,255,0.35)",
-              boxShadow:
-                "0 0 0 6px rgba(124,110,255,0.07), 0 16px 48px rgba(0,0,0,0.45)",
+              boxShadow: "0 0 0 6px rgba(124,110,255,0.07), 0 16px 48px rgba(0,0,0,0.45)",
             }}
           >
             {profileSrc && (
-              <img
-                src={profileSrc}
-                alt="Jett Villegas"
-                className="absolute inset-0 w-full h-full object-cover object-top"
-              />
+              <img src={profileSrc} alt="Jett Villegas" className="absolute inset-0 w-full h-full object-cover object-top" />
             )}
-            <div
-              className="absolute inset-0 rounded-full pointer-events-none"
-              style={{ boxShadow: "inset 0 0 32px rgba(124,110,255,0.14)" }}
-            />
+            <div className="absolute inset-0 rounded-full pointer-events-none" style={{ boxShadow: "inset 0 0 32px rgba(124,110,255,0.14)" }} />
           </div>
-
-          {/* Ambient glow */}
-          <div
-            className="absolute inset-0 rounded-full pointer-events-none"
-            style={{
-              background:
-                "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.13) 0%, transparent 65%)",
-              filter: "blur(16px)",
-            }}
-          />
+          {/* Glow */}
+          <div className="absolute inset-0 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.13) 0%, transparent 65%)", filter: "blur(16px)" }} />
         </div>
       </div>
 
       {/* ── LEFT — Text content ── */}
-      <div className="flex-1 max-w-[56rem] relative z-10 flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
+      <div className="flex-1 w-full relative z-10 flex flex-col justify-center items-center sm:items-start text-center sm:text-left" style={{ minWidth: 0 }}>
+
         {/* Status badge */}
         <div
-          className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-medium text-[var(--accent2)] mb-6 sm:mb-8 w-fit"
+          className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-medium text-[var(--accent2)] mb-5 sm:mb-8 w-fit"
           style={{
             background: "rgba(124,110,255,0.07)",
             border: "1px solid rgba(124,110,255,0.2)",
@@ -284,19 +211,16 @@ export function HeroSection() {
             transition: "opacity 0.5s ease, transform 0.5s ease",
           }}
         >
-          <span
-            className="w-2 h-2 rounded-full bg-[#4ade80]"
-            style={{ boxShadow: "0 0 6px #4ade80", animation: "pulse-green 2s infinite" }}
-          />
+          <span className="w-2 h-2 rounded-full bg-[#4ade80]" style={{ boxShadow: "0 0 6px #4ade80", animation: "pulse-green 2s infinite" }} />
           Available for work
         </div>
 
         {/* Headline */}
         <h1
-          className="font-extrabold tracking-tight mb-5 sm:mb-6"
+          className="font-extrabold tracking-tight mb-4 sm:mb-6"
           style={{
             fontFamily: "var(--font-syne), Syne, sans-serif",
-            fontSize: "clamp(2.2rem, 6vw, 6.5rem)",
+            fontSize: "clamp(2.4rem, 10vw, 6.5rem)",
             lineHeight: 1.05,
           }}
         >
@@ -318,10 +242,11 @@ export function HeroSection() {
 
         {/* Subtitle */}
         <p
-          className="leading-relaxed text-[var(--muted)] mb-4 sm:mb-5 max-w-[38rem]"
+          className="leading-relaxed text-[var(--muted)] mb-4 sm:mb-5"
           style={{
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: "clamp(0.875rem, 2.5vw, 1.0625rem)",
+            fontSize: "clamp(0.875rem, 3vw, 1.0625rem)",
+            maxWidth: "38rem",
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
             transition: "opacity 0.5s ease 0.28s, transform 0.5s ease 0.28s",
@@ -333,17 +258,14 @@ export function HeroSection() {
 
         {/* Typed row */}
         <div
-          className="flex items-center justify-center sm:justify-start gap-3 mb-8 sm:mb-10"
+          className="flex items-center justify-center sm:justify-start gap-3 mb-6 sm:mb-10"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
             transition: "opacity 0.5s ease 0.36s, transform 0.5s ease 0.36s",
           }}
         >
-          <span
-            className="text-[var(--muted)] uppercase tracking-[0.2em] shrink-0"
-            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.7rem" }}
-          >
+          <span className="text-[var(--muted)] uppercase tracking-[0.2em] shrink-0" style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.7rem" }}>
             Currently:
           </span>
           <TypedText
@@ -356,9 +278,9 @@ export function HeroSection() {
           />
         </div>
 
-        {/* CTAs — stack vertically on mobile, row on sm+ */}
+        {/* CTAs — full width on mobile, auto on sm+ */}
         <div
-          className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-3 mb-8 sm:mb-10 w-full sm:w-auto"
+          className="flex flex-row items-center gap-3 mb-6 sm:mb-10 w-full sm:w-auto"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
@@ -368,29 +290,16 @@ export function HeroSection() {
           <Link
             href="#portfolio"
             onClick={(e) => handleNavClick(e, "#portfolio")}
-            className="group inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_var(--glow)] active:scale-95"
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "0.925rem",
-              background: "var(--accent)",
-              letterSpacing: "0.01em",
-            }}
+            className="group flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_28px_var(--glow)] active:scale-95 whitespace-nowrap"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", background: "var(--accent)", letterSpacing: "0.01em" }}
           >
             View My Work
           </Link>
-
           <Link
             href="#contact"
             onClick={(e) => handleNavClick(e, "#contact")}
-            className="group inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-lg font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
-            style={{
-              fontFamily: "'DM Sans', sans-serif",
-              fontSize: "0.925rem",
-              color: "var(--text)",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              letterSpacing: "0.01em",
-            }}
+            className="group flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95 whitespace-nowrap"
+            style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.9rem", color: "var(--text)", background: "var(--surface)", border: "1px solid var(--border)", letterSpacing: "0.01em" }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(124,110,255,0.35)")}
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
           >
@@ -398,7 +307,7 @@ export function HeroSection() {
           </Link>
         </div>
 
-        {/* Social links + scroll hint */}
+        {/* Social links */}
         <div
           className="flex items-center justify-center sm:justify-start gap-2"
           style={{
@@ -420,23 +329,10 @@ export function HeroSection() {
               <s.Icon size={16} />
             </a>
           ))}
-
           <div className="hidden lg:flex items-center gap-3 ml-4 text-[var(--muted)]">
             <div className="w-px h-4 bg-[var(--border)]" />
-            <span
-              style={{
-                fontFamily: "'DM Sans', sans-serif",
-                fontSize: "0.62rem",
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-              }}
-            >
-              Scroll
-            </span>
-            <div
-              className="w-px h-8 bg-gradient-to-b from-[var(--muted)] to-transparent"
-              style={{ animation: "scroll-anim 1.6s ease-in-out infinite" }}
-            />
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase" }}>Scroll</span>
+            <div className="w-px h-8 bg-gradient-to-b from-[var(--muted)] to-transparent" style={{ animation: "scroll-anim 1.6s ease-in-out infinite" }} />
           </div>
         </div>
       </div>
@@ -452,147 +348,36 @@ export function HeroSection() {
           transition: "opacity 0.7s ease 0.2s, transform 0.7s ease 0.2s",
         }}
       >
-        {/* Dashed ring tracks */}
         {orbitRings.map((ring, ri) => {
           const isBoosted = boostedRings.has(ri)
           return (
-            <div
-              key={`track-${ri}`}
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                width: ring.radius * 2,
-                height: ring.radius * 2,
-                top: "50%",
-                left: "50%",
-                marginLeft: -ring.radius,
-                marginTop: -ring.radius,
-                border: isBoosted
-                  ? "1px dashed rgba(124,110,255,0.55)"
-                  : "1px dashed rgba(124,110,255,0.12)",
-                boxShadow: isBoosted
-                  ? "0 0 30px rgba(124,110,255,0.2), inset 0 0 30px rgba(124,110,255,0.06)"
-                  : "none",
-                transition: "border-color 0.35s ease, box-shadow 0.35s ease",
-              }}
-            />
+            <div key={`track-${ri}`} className="absolute rounded-full pointer-events-none" style={{ width: ring.radius * 2, height: ring.radius * 2, top: "50%", left: "50%", marginLeft: -ring.radius, marginTop: -ring.radius, border: isBoosted ? "1px dashed rgba(124,110,255,0.55)" : "1px dashed rgba(124,110,255,0.12)", boxShadow: isBoosted ? "0 0 30px rgba(124,110,255,0.2), inset 0 0 30px rgba(124,110,255,0.06)" : "none", transition: "border-color 0.35s ease, box-shadow 0.35s ease" }} />
           )
         })}
-
-        {/* Spinning icon rings */}
         {orbitRings.map((ring, ri) => {
           const isBoosted = boostedRings.has(ri)
           const animDuration = getAnimDuration(ri, ring.duration)
-
           return (
-            <div
-              key={`ring-${ri}`}
-              className="absolute"
-              style={{
-                width: ring.radius * 2,
-                height: ring.radius * 2,
-                top: "50%",
-                left: "50%",
-                marginLeft: -ring.radius,
-                marginTop: -ring.radius,
-                borderRadius: "50%",
-                animationName: "spin",
-                animationDuration: animDuration,
-                animationTimingFunction: "linear",
-                animationIterationCount: "infinite",
-                animationDirection: ring.direction === -1 ? "reverse" : "normal",
-                willChange: "transform",
-              }}
-            >
+            <div key={`ring-${ri}`} className="absolute" style={{ width: ring.radius * 2, height: ring.radius * 2, top: "50%", left: "50%", marginLeft: -ring.radius, marginTop: -ring.radius, borderRadius: "50%", animationName: "spin", animationDuration: animDuration, animationTimingFunction: "linear", animationIterationCount: "infinite", animationDirection: ring.direction === -1 ? "reverse" : "normal", willChange: "transform" }}>
               {ring.icons.map(({ Icon, label, angle }) => {
                 const rad = (angle * Math.PI) / 180
                 const x = Number((ring.radius + Math.cos(rad) * ring.radius - 18).toFixed(2))
                 const y = Number((ring.radius + Math.sin(rad) * ring.radius - 18).toFixed(2))
                 return (
-                  <div
-                    key={label}
-                    title={label}
-                    role="button"
-                    aria-label={`${label} — click to boost ring`}
-                    onClick={(e) => handleIconClick(ri, e)}
-                    className="absolute w-9 h-9 rounded-xl flex items-center justify-center text-[var(--accent2)]"
-                    style={{
-                      left: x,
-                      top: y,
-                      cursor: isBoosted ? "default" : "pointer",
-                      pointerEvents: "auto",
-                      background: isLight
-                        ? "rgba(255,255,255,0.92)"
-                        : "rgba(18,18,28,0.88)",
-                      backdropFilter: "blur(12px)",
-                      border: isBoosted
-                        ? "1px solid rgba(124,110,255,0.65)"
-                        : isLight
-                        ? "1px solid rgba(124,110,255,0.15)"
-                        : "1px solid rgba(124,110,255,0.22)",
-                      boxShadow: isBoosted
-                        ? "0 0 18px rgba(124,110,255,0.5), 0 4px 16px rgba(0,0,0,0.3)"
-                        : isLight
-                        ? "0 4px 20px rgba(0,0,0,0.06)"
-                        : "0 4px 16px rgba(0,0,0,0.4)",
-                      animationName: "spin",
-                      animationDuration: animDuration,
-                      animationTimingFunction: "linear",
-                      animationIterationCount: "infinite",
-                      animationDirection: ring.direction === -1 ? "normal" : "reverse",
-                      willChange: "transform",
-                    }}
-                  >
+                  <div key={label} title={label} role="button" aria-label={`${label} — click to boost ring`} onClick={(e) => handleIconClick(ri, e)} className="absolute w-9 h-9 rounded-xl flex items-center justify-center text-[var(--accent2)]" style={{ left: x, top: y, cursor: isBoosted ? "default" : "pointer", pointerEvents: "auto", background: isLight ? "rgba(255,255,255,0.92)" : "rgba(18,18,28,0.88)", backdropFilter: "blur(12px)", border: isBoosted ? "1px solid rgba(124,110,255,0.65)" : isLight ? "1px solid rgba(124,110,255,0.15)" : "1px solid rgba(124,110,255,0.22)", boxShadow: isBoosted ? "0 0 18px rgba(124,110,255,0.5), 0 4px 16px rgba(0,0,0,0.3)" : isLight ? "0 4px 20px rgba(0,0,0,0.06)" : "0 4px 16px rgba(0,0,0,0.4)", animationName: "spin", animationDuration: animDuration, animationTimingFunction: "linear", animationIterationCount: "infinite", animationDirection: ring.direction === -1 ? "normal" : "reverse", willChange: "transform" }}>
                     <Icon size={15} />
-                    {isBoosted && (
-                      <span
-                        className="absolute inset-0 rounded-xl animate-ping"
-                        style={{
-                          background: "rgba(124,110,255,0.2)",
-                          animationDuration: "0.75s",
-                          pointerEvents: "none",
-                        }}
-                      />
-                    )}
+                    {isBoosted && <span className="absolute inset-0 rounded-xl animate-ping" style={{ background: "rgba(124,110,255,0.2)", animationDuration: "0.75s", pointerEvents: "none" }} />}
                   </div>
                 )
               })}
             </div>
           )
         })}
-
-        {/* Centre photo */}
-        <div
-          className="relative rounded-full overflow-hidden z-10"
-          style={{
-            width: "min(280px, 29vw)",
-            height: "min(280px, 29vw)",
-            border: "2px solid rgba(124,110,255,0.3)",
-            boxShadow:
-              "0 0 0 6px rgba(124,110,255,0.06), 0 20px 60px rgba(0,0,0,0.5)",
-          }}
-        >
-          {profileSrc && (
-            <img
-              src={profileSrc}
-              alt="Jett Villegas"
-              className="absolute inset-0 w-full h-full object-cover object-top"
-            />
-          )}
-          <div
-            className="absolute inset-0 rounded-full pointer-events-none"
-            style={{ boxShadow: "inset 0 0 40px rgba(124,110,255,0.12)" }}
-          />
+        <div className="relative rounded-full overflow-hidden z-10" style={{ width: "min(280px, 29vw)", height: "min(280px, 29vw)", border: "2px solid rgba(124,110,255,0.3)", boxShadow: "0 0 0 6px rgba(124,110,255,0.06), 0 20px 60px rgba(0,0,0,0.5)" }}>
+          {profileSrc && <img src={profileSrc} alt="Jett Villegas" className="absolute inset-0 w-full h-full object-cover object-top" />}
+          <div className="absolute inset-0 rounded-full pointer-events-none" style={{ boxShadow: "inset 0 0 40px rgba(124,110,255,0.12)" }} />
         </div>
-
-        {/* Ambient glow behind photo */}
-        <div
-          className="absolute inset-0 rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.1) 0%, transparent 65%)",
-            filter: "blur(20px)",
-          }}
-        />
+        <div className="absolute inset-0 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.1) 0%, transparent 65%)", filter: "blur(20px)" }} />
       </div>
     </section>
   )
