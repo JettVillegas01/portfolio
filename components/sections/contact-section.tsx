@@ -60,7 +60,7 @@ export function ContactSection() {
             className="font-extrabold leading-tight tracking-tight mb-5"
             style={{
               fontFamily: "var(--font-syne), Syne, sans-serif",
-              fontSize: "clamp(2.4rem, 4vw, 4rem)",
+              fontSize: "clamp(1.9rem, 4vw, 4rem)",
               lineHeight: 1.1,
             }}
           >

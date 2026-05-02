@@ -156,20 +156,28 @@ export function AboutSection() {
 
         {/* Stats */}
         <div
-          className="flex items-center gap-6 mt-4 p-5 rounded-xl"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          className="grid mt-4 p-4 sm:p-5 rounded-xl overflow-hidden"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            gridTemplateColumns: `repeat(${Math.min(aboutStats.length, 3)}, 1fr)`,
+          }}
         >
           {aboutStats.map((stat, i) => (
             <Fragment key={stat.label}>
-              {i > 0 && <div className="w-px h-8 bg-[var(--border)]" />}
-              <div className="text-center flex-1 cursor-default group">
+              <div
+                className="text-center flex-1 cursor-default group py-1"
+                style={{
+                  borderLeft: i > 0 ? "1px solid var(--border)" : undefined,
+                }}
+              >
                 <span
-                  className="block text-2xl font-extrabold text-[var(--accent)] leading-none transition-transform duration-200 group-hover:scale-110"
+                  className="block text-xl sm:text-2xl font-extrabold text-[var(--accent)] leading-none transition-transform duration-200 group-hover:scale-110"
                   style={{ fontFamily: "var(--font-syne), Syne, sans-serif" }}
                 >
                   {stat.value}
                 </span>
-                <span className="text-[0.7rem] text-[var(--muted)] uppercase tracking-wider mt-1 block">
+                <span className="text-[0.65rem] sm:text-[0.7rem] text-[var(--muted)] uppercase tracking-wider mt-1 block leading-tight">
                   {stat.label}
                 </span>
               </div>
@@ -194,7 +202,7 @@ export function AboutSection() {
           className="font-extrabold leading-tight tracking-tight mb-5"
           style={{
             fontFamily: "var(--font-syne), Syne, sans-serif",
-            fontSize: "clamp(2.4rem, 4vw, 4rem)",
+            fontSize: "clamp(1.9rem, 4vw, 4rem)",
             lineHeight: 1.1,
           }}
         >

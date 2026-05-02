@@ -14,10 +14,6 @@ function getFrameSrc(n: number): string {
   return `/images/profile_frame/frame-${String(n).padStart(3, "0")}.jpg`
 }
 
-/**
- * Returns null until the client has mounted. Handles background preloading
- * to prevent flashes, and uses requestAnimationFrame for buttery smooth playback.
- */
 function useProfileFrame(theme: string, mounted: boolean): string | null {
   const [frame, setFrame] = useState<number | null>(null)
   const frameRef = useRef<number>(TOTAL_FRAMES)
@@ -66,8 +62,6 @@ function useProfileFrame(theme: string, mounted: boolean): string | null {
     },
     [stop]
   )
-
-  // Frames are preloaded by LoadingScreen before the site is revealed
 
   useEffect(() => {
     if (!mounted) return
@@ -153,7 +147,7 @@ export function HeroSection() {
   return (
     <section
       id="home"
-      className="relative min-h-screen flex flex-col lg:flex-row items-center justify-between gap-8 overflow-hidden"
+      className="relative min-h-screen flex flex-col sm:flex-row lg:flex-row items-center justify-between gap-8 sm:gap-10 lg:gap-8 overflow-hidden"
     >
       {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
@@ -186,11 +180,101 @@ export function HeroSection() {
         JETT
       </div>
 
-      {/* LEFT — Text content */}
-      <div className="flex-1 max-w-[56rem] relative z-10 flex flex-col justify-center">
+      {/* ── Mobile / Tablet profile image — hidden on lg+ ── */}
+      <div
+        className="flex lg:hidden order-first sm:order-last flex-shrink-0 relative z-10 items-center justify-center"
+        style={{
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? "translateY(0)" : "translateY(16px)",
+          transition: "opacity 0.7s ease 0.2s, transform 0.7s ease 0.2s",
+        }}
+      >
+        <div
+          className="relative flex items-center justify-center"
+          style={{
+            width: "clamp(160px, 36vw, 280px)",
+            height: "clamp(160px, 36vw, 280px)",
+          }}
+        >
+          {/* Outer spinning dashed ring */}
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              border: "1px dashed rgba(124,110,255,0.22)",
+              animation: "spin 18s linear infinite",
+            }}
+          />
+          {/* Inner counter-spinning ring */}
+          <div
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              inset: "14px",
+              border: "1px dashed rgba(124,110,255,0.12)",
+              animation: "spin 12s linear infinite reverse",
+            }}
+          />
+
+          {/* Accent dot top */}
+          <div
+            className="absolute w-2.5 h-2.5 rounded-full bg-[var(--accent)]"
+            style={{
+              top: "6px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              boxShadow: "0 0 10px rgba(124,110,255,0.7)",
+            }}
+          />
+          {/* Accent dot bottom-right */}
+          <div
+            className="absolute w-2 h-2 rounded-full bg-[var(--accent2)]"
+            style={{
+              bottom: "12px",
+              right: "16px",
+              boxShadow: "0 0 7px rgba(124,110,255,0.45)",
+            }}
+          />
+
+          {/* Circular profile photo */}
+          <div
+            className="relative rounded-full overflow-hidden z-10"
+            style={{
+              width: "clamp(128px, 28vw, 220px)",
+              height: "clamp(128px, 28vw, 220px)",
+              border: "2px solid rgba(124,110,255,0.35)",
+              boxShadow:
+                "0 0 0 6px rgba(124,110,255,0.07), 0 16px 48px rgba(0,0,0,0.45)",
+            }}
+          >
+            {profileSrc && (
+              <img
+                src={profileSrc}
+                alt="Jett Villegas"
+                className="absolute inset-0 w-full h-full object-cover object-top"
+              />
+            )}
+            <div
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ boxShadow: "inset 0 0 32px rgba(124,110,255,0.14)" }}
+            />
+          </div>
+
+          {/* Ambient glow */}
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.13) 0%, transparent 65%)",
+              filter: "blur(16px)",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* ── LEFT — Text content ── */}
+      <div className="flex-1 max-w-[56rem] relative z-10 flex flex-col justify-center items-center sm:items-start text-center sm:text-left">
         {/* Status badge */}
         <div
-          className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-medium text-[var(--accent2)] mb-8 w-fit"
+          className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-medium text-[var(--accent2)] mb-6 sm:mb-8 w-fit"
           style={{
             background: "rgba(124,110,255,0.07)",
             border: "1px solid rgba(124,110,255,0.2)",
@@ -209,10 +293,10 @@ export function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="font-extrabold tracking-tight mb-6"
+          className="font-extrabold tracking-tight mb-5 sm:mb-6"
           style={{
             fontFamily: "var(--font-syne), Syne, sans-serif",
-            fontSize: "clamp(3.4rem, 6vw, 6.5rem)",
+            fontSize: "clamp(2.2rem, 6vw, 6.5rem)",
             lineHeight: 1.05,
           }}
         >
@@ -234,10 +318,10 @@ export function HeroSection() {
 
         {/* Subtitle */}
         <p
-          className="leading-relaxed text-[var(--muted)] mb-5 max-w-[38rem]"
+          className="leading-relaxed text-[var(--muted)] mb-4 sm:mb-5 max-w-[38rem]"
           style={{
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: "1.0625rem",
+            fontSize: "clamp(0.875rem, 2.5vw, 1.0625rem)",
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
             transition: "opacity 0.5s ease 0.28s, transform 0.5s ease 0.28s",
@@ -249,7 +333,7 @@ export function HeroSection() {
 
         {/* Typed row */}
         <div
-          className="flex items-center gap-3 mb-10"
+          className="flex items-center justify-center sm:justify-start gap-3 mb-8 sm:mb-10"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
@@ -272,9 +356,9 @@ export function HeroSection() {
           />
         </div>
 
-        {/* CTAs */}
+        {/* CTAs — stack vertically on mobile, row on sm+ */}
         <div
-          className="flex flex-row items-center gap-3 mb-10"
+          className="flex flex-col xs:flex-row sm:flex-row items-stretch sm:items-center gap-3 mb-8 sm:mb-10 w-full sm:w-auto"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
@@ -314,9 +398,9 @@ export function HeroSection() {
           </Link>
         </div>
 
-        {/* Social + scroll hint */}
+        {/* Social links + scroll hint */}
         <div
-          className="flex items-center gap-2"
+          className="flex items-center justify-center sm:justify-start gap-2"
           style={{
             opacity: mounted ? 1 : 0,
             transform: mounted ? "translateY(0)" : "translateY(14px)",
@@ -339,7 +423,14 @@ export function HeroSection() {
 
           <div className="hidden lg:flex items-center gap-3 ml-4 text-[var(--muted)]">
             <div className="w-px h-4 bg-[var(--border)]" />
-            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase" }}>
+            <span
+              style={{
+                fontFamily: "'DM Sans', sans-serif",
+                fontSize: "0.62rem",
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+              }}
+            >
               Scroll
             </span>
             <div
@@ -350,7 +441,7 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* RIGHT — Orbiting image */}
+      {/* ── RIGHT — Desktop orbit rings (lg+ only) ── */}
       <div
         className="hidden lg:flex flex-shrink-0 relative z-10 items-center justify-center"
         style={{
@@ -429,7 +520,9 @@ export function HeroSection() {
                       top: y,
                       cursor: isBoosted ? "default" : "pointer",
                       pointerEvents: "auto",
-                      background: isLight ? "rgba(255,255,255,0.92)" : "rgba(18,18,28,0.88)",
+                      background: isLight
+                        ? "rgba(255,255,255,0.92)"
+                        : "rgba(18,18,28,0.88)",
                       backdropFilter: "blur(12px)",
                       border: isBoosted
                         ? "1px solid rgba(124,110,255,0.65)"
@@ -467,14 +560,15 @@ export function HeroSection() {
           )
         })}
 
-        {/* Centre photo — only render once we have the correct frame */}
+        {/* Centre photo */}
         <div
           className="relative rounded-full overflow-hidden z-10"
           style={{
             width: "min(280px, 29vw)",
             height: "min(280px, 29vw)",
             border: "2px solid rgba(124,110,255,0.3)",
-            boxShadow: "0 0 0 6px rgba(124,110,255,0.06), 0 20px 60px rgba(0,0,0,0.5)",
+            boxShadow:
+              "0 0 0 6px rgba(124,110,255,0.06), 0 20px 60px rgba(0,0,0,0.5)",
           }}
         >
           {profileSrc && (
@@ -494,38 +588,11 @@ export function HeroSection() {
         <div
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
-            background: "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.1) 0%, transparent 65%)",
+            background:
+              "radial-gradient(circle at 50% 50%, rgba(124,110,255,0.1) 0%, transparent 65%)",
             filter: "blur(20px)",
           }}
         />
-
-        {/* Hint label */}
-      </div>
-
-      {/* Mobile image */}
-      <div
-        className="flex lg:hidden flex-shrink-0 relative z-10 w-[min(28rem,80vw)]"
-        style={{
-          opacity: mounted ? 1 : 0,
-          transform: mounted ? "translateY(0)" : "translateY(16px)",
-          transition: "opacity 0.7s ease 0.2s, transform 0.7s ease 0.2s",
-        }}
-      >
-        <div
-          className="relative rounded-3xl overflow-hidden w-full"
-          style={{
-            border: "1px solid var(--border)",
-            aspectRatio: "4 / 3",
-          }}
-        >
-          {profileSrc && (
-            <img
-              src={profileSrc}
-              alt="Jett Villegas"
-              className="absolute inset-0 w-full h-full object-cover object-center"
-            />
-          )}
-        </div>
       </div>
     </section>
   )
