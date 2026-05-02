@@ -491,22 +491,6 @@ function CareerBlock() {
           from { opacity: 0; transform: translateY(24px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .career-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-        @media (min-width: 640px) {
-          .career-grid {
-            grid-template-columns: repeat(4, 1fr);
-          }
-        }
-        .boaz-card {
-          grid-column: span 2;
-        }
-        @media (min-width: 640px) {
-          .boaz-card {
-            grid-column: span 1;
-          }
-        }
         .flip-card {
           perspective: 1000px;
           width: 100%;
@@ -629,10 +613,9 @@ function CareerBlock() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
             gap: "1rem",
           }}
-          className="career-grid"
+          className="career-grid-responsive"
         >
           {careerEntries.map((entry, i) => (
             <div
@@ -647,25 +630,26 @@ function CareerBlock() {
               }}
             >
               {entry.type === "real" ? (
-                <div className="flip-card flip-card-real boaz-card">
+                <div className="flip-card flip-card-real">
                   <div className="flip-card-inner">
                     <div
-                      className="flip-card-front"
+                      className="flip-card-front boaz-front"
                       style={{
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: "0.85rem",
-                        padding: "1.25rem",
+                        gap: "0.5rem",
+                        padding: "0.5rem",
                         textAlign: "center",
                       }}
                     >
                       <div
+                        className="boaz-logo-wrap"
                         style={{
-                          width: "72px",
-                          height: "72px",
-                          borderRadius: "18px",
+                          width: "56px",
+                          height: "56px",
+                          borderRadius: "14px",
                           overflow: "hidden",
                           border: "1px solid rgba(255,255,255,0.1)",
                           background: "#fff",
@@ -676,10 +660,10 @@ function CareerBlock() {
                         <Image
                           src={(entry as any).logo}
                           alt={(entry as any).company}
-                          width={72}
-                          height={72}
+                          width={56}
+                          height={56}
                           style={{
-                            objectFit: "cover",
+                            objectFit: "contain",
                             width: "100%",
                             height: "100%",
                           }}
@@ -740,6 +724,7 @@ function CareerBlock() {
                         Ongoing
                       </span>
                       <p
+                        className="hover-hint"
                         style={{
                           fontFamily: "var(--font-dm-sans), sans-serif",
                           fontSize: "0.62rem",

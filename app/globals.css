@@ -201,3 +201,33 @@ p {
   line-height: 1.7;
   color: var(--text2);
 }
+
+/* ─── Career Grid — Responsive ──────────────────────────────────────────── */
+.career-grid-responsive {
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 640px) {
+  .career-grid-responsive {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ─── BOAZ Card — Mobile optimizations ─────────────────────────────────── */
+.boaz-logo-wrap {
+  width: 56px;
+  height: 56px;
+}
+@media (max-width: 639px) {
+  .boaz-front {
+    gap: 0.35rem !important;
+    padding: 0.4rem !important;
+  }
+  .boaz-logo-wrap {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 12px !important;
+  }
+  .hover-hint {
+    display: none;
+  }
+}
