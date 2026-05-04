@@ -1375,56 +1375,6 @@ function SlideCard({
         />
       )}
 
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: hovered
-            ? "linear-gradient(to top, rgba(7,7,14,0.82) 0%, rgba(7,7,14,0.2) 55%, transparent 100%)"
-            : "linear-gradient(to top, rgba(7,7,14,0.35) 0%, transparent 60%)",
-          transition: "background 0.35s var(--ease)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-          padding: "12px",
-          pointerEvents: "none",
-        }}
-      >
-        <div
-          style={{
-            opacity: hovered ? 1 : 0,
-            transform: hovered ? "translateY(0)" : "translateY(6px)",
-            transition: "opacity 0.3s var(--ease), transform 0.3s var(--ease)",
-          }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--font-syne), sans-serif",
-              fontSize: "0.78rem",
-              fontWeight: 700,
-              color: "#fff",
-              margin: 0,
-              lineHeight: 1.3,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {img.title}
-          </p>
-          <p
-            style={{
-              fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: "0.65rem",
-              fontWeight: 500,
-              color: "var(--accent2)",
-              margin: "2px 0 0",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-            }}
-          >
-            {img.location}
-          </p>
-        </div>
-      </div>
     </div>
   )
 }
@@ -1545,91 +1495,7 @@ function Lightbox({
           priority
         />
       </div>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          marginTop: "1.25rem",
-          width: "100%",
-          maxWidth: "820px",
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          borderRadius: "12px",
-          padding: "1rem 1.25rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-          animation:
-            "lbUp 0.32s cubic-bezier(0.4,0,0.2,1) 0.06s both forwards",
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "4px",
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: "var(--font-syne), sans-serif",
-                fontSize: "1rem",
-                fontWeight: 700,
-                color: "var(--text)",
-                margin: 0,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {img.title}
-            </h3>
-            <span
-              style={{
-                fontFamily: "var(--font-dm-sans), sans-serif",
-                fontSize: "0.65rem",
-                fontWeight: 600,
-                color: "var(--accent)",
-                background: "rgba(124,110,255,0.12)",
-                border: "1px solid rgba(124,110,255,0.25)",
-                borderRadius: "20px",
-                padding: "2px 10px",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {img.location}
-            </span>
-          </div>
-          <p
-            style={{
-              fontFamily: "var(--font-dm-sans), sans-serif",
-              fontSize: "0.82rem",
-              color: "var(--text2)",
-              margin: 0,
-              lineHeight: 1.6,
-            }}
-          >
-            {img.description}
-          </p>
-        </div>
-        <div
-          style={{
-            fontFamily: "var(--font-dm-sans), sans-serif",
-            fontSize: "0.75rem",
-            fontWeight: 500,
-            color: "var(--muted)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <span style={{ color: "var(--accent2)", fontWeight: 700 }}>
-            {idx + 1}
-          </span>{" "}
-          / {TOTAL}
-        </div>
-      </div>
+
       <LbBtn
         pos={{ top: "1.25rem", right: "1.25rem" }}
         onClick={onClose}
