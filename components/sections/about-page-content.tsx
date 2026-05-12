@@ -734,7 +734,7 @@ function CareerBlock() {
                           letterSpacing: "0.05em",
                         }}
                       >
-                        Hover to flip
+                        
                       </p>
                     </div>
 
