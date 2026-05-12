@@ -258,7 +258,7 @@ export function HeroSection() {
           <span className="text-[var(--muted)] uppercase tracking-[.2em] shrink-0"
             style={{ fontFamily:"'DM Sans',sans-serif", fontSize:".7rem" }}>Currently:</span>
           <TypedText
-            strings={["Frontend Developer","Web Designer","QA Analyst"]}
+            strings={["Full Stack Developer","Frontend Developer","Web Designer","QA Analyst"]}
             className="font-semibold text-[var(--accent2)]"
             style={{ fontFamily:"'DM Sans',sans-serif", fontSize:"1rem" }}
             typeSpeed={70} backSpeed={45} backDelay={1800}

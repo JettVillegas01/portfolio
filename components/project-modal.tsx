@@ -1,7 +1,8 @@
 "use client"
 
 import Image from "next/image"
-import { X, ExternalLink } from "lucide-react"
+import Link from "next/link"
+import { X, ExternalLink, LayoutGrid } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface Project {
@@ -149,27 +150,50 @@ export function ProjectModal({ project, isOpen, onClose }: ProjectModalProps) {
           )}
 
           {/* Link Button */}
-          {project.link && (
-            <a
-              href={project.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 group"
+          <div className="flex flex-wrap items-center gap-3">
+            {project.link && (
+              <a
+                href={project.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 group"
+                style={{
+                  background: "var(--accent)",
+                  color: "#fff",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--accent2)"
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "var(--accent)"
+                }}
+              >
+                <span>Visit Project</span>
+                <ExternalLink size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </a>
+            )}
+
+            <Link
+              href="/portfolio"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:-translate-y-0.5 active:scale-95 group"
               style={{
-                background: "var(--accent)",
-                color: "#fff",
+                color: "var(--accent)",
+                border: "1px solid rgba(124,110,255,0.3)",
+                background: "rgba(124,110,255,0.06)",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--accent2)"
+                e.currentTarget.style.borderColor = "rgba(124,110,255,0.55)"
+                e.currentTarget.style.background = "rgba(124,110,255,0.12)"
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "var(--accent)"
+                e.currentTarget.style.borderColor = "rgba(124,110,255,0.3)"
+                e.currentTarget.style.background = "rgba(124,110,255,0.06)"
               }}
             >
-              <span>Visit Project</span>
-              <ExternalLink size={18} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            </a>
-          )}
+              <LayoutGrid size={16} />
+              See All Projects
+            </Link>
+          </div>
         </div>
           </motion.div>
         </motion.div>

@@ -210,9 +210,10 @@ export function AboutSection() {
         </h2>
 
         <p className="text-[0.97rem] leading-relaxed text-[var(--muted)] mb-4">
-          I&apos;m an IT student with hands-on experience in computer assembly, basic troubleshooting,
-          frontend development, and MS Office. I&apos;m eager to learn, adaptable, and committed to
-          growing my skills and gaining real-world experience in the IT field.
+          I&apos;m an IT student and full stack developer who builds complete web applications —
+          from crafting polished, responsive frontends to designing and connecting robust backends,
+          APIs, and databases. I&apos;ve shipped real projects end-to-end and I&apos;m always pushing
+          my stack further, one feature at a time.
         </p>
 
         <p className="text-[0.97rem] leading-relaxed text-[var(--muted)] mb-7">

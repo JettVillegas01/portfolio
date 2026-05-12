@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { ExternalLink, ArrowUpRight } from "lucide-react"
+import { ExternalLink, ArrowUpRight, ArrowRight } from "lucide-react"
 import { motion } from "framer-motion"
 import { ProjectModal } from "@/components/project-modal"
 import { projects, type Project } from "@/lib/data"
@@ -119,6 +119,23 @@ export function PortfolioSection() {
           </motion.button>
         ))}
       </motion.div>
+
+      {/* See More Button */}
+      <div className="flex justify-center mt-10">
+        <div
+          className="group inline-flex items-center gap-2.5 px-8 py-3.5 rounded-xl text-sm font-semibold select-none"
+          style={{
+            color: "var(--accent)",
+            border: "1px solid rgba(124,110,255,0.3)",
+            background: "rgba(124,110,255,0.06)",
+            cursor: "default",
+            pointerEvents: "none",
+          }}
+        >
+          See More Projects
+          <ArrowRight size={16} />
+        </div>
+      </div>
 
       {/* Project Modal */}
       <ProjectModal

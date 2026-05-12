@@ -527,7 +527,7 @@ export function FeedbackSection() {
             lineHeight: 1.7,
           }}
         >
-          Real words from people I've collaborated with — and feel free to leave yours.
+          feel free to leave a comment!
         </p>
       </div>
 
@@ -566,7 +566,6 @@ export function FeedbackSection() {
               Leave a Feedback
             </h3>
             <p style={{ fontSize: "0.78rem", color: "var(--muted)", margin: 0, lineHeight: 1.5 }}>
-              Worked with me? Share your experience.
             </p>
           </div>
 
@@ -634,7 +633,7 @@ export function FeedbackSection() {
               {/* Role */}
               <div>
                 <label style={{ fontSize: "0.75rem", color: "var(--text2)", fontWeight: 500, display: "block", marginBottom: "0.4rem", letterSpacing: "0.03em" }}>
-                  Role / Company *
+                  Connection
                 </label>
                 <input
                   type="text"
@@ -662,7 +661,7 @@ export function FeedbackSection() {
                   Your Feedback *
                 </label>
                 <textarea
-                  placeholder="Share your experience working with Jett..."
+                  placeholder="Leave a thought"
                   value={comment}
                   onChange={(e) => { setComment(e.target.value); setErrors((p) => ({ ...p, comment: "" })) }}
                   rows={4}
